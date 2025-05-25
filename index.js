@@ -1,74 +1,58 @@
-const express = require('express');
+const express = require("express");
+const http = require("http");
+const cors = require("cors");
+const { Server } = require("socket.io");
+
 const app = express();
-const http = require('http');
-const cors = require('cors');
-const { Server } = require('socket.io');
-
-app.use(cors());
-
 const server = http.createServer(app);
 
-// Update the origin to include your Vercel frontend URL
+// ✅ Allow both localhost and deployed frontend on Vercel
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://chatbot-frontend-xyz1.vercel.app"
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
+
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:3000', 'https://your-vercel-frontend.vercel.app'],
-    methods: ['GET', 'POST']
-  }
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
 });
 
-// ✅ Root route to test backend
-app.get('/', (req, res) => {
-  res.send('Chatbot backend is running ✅');
-});
+// 🔁 Socket.io logic
+io.on("connection", (socket) => {
+  console.log("A user connected:", socket.id);
 
-// In-memory storage for messages (per room)
-const roomMessages = {}; // { roomId: [ { messageData } ] }
-
-io.on('connection', (socket) => {
-  console.log(`User Connected: ${socket.id}`);
-
-  // When a user joins a room
-  socket.on('join_room', (room) => {
-    socket.join(room);
-    console.log(`User with ID: ${socket.id} joined room: ${room}`);
-
-    // Filter messages from the last 7 days
-    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-
-    const filteredMessages = (roomMessages[room] || []).filter(
-      (msg) => msg.timestamp > sevenDaysAgo
-    );
-
-    // Send those to the new user only
-    socket.emit('load_previous_messages', filteredMessages);
+  socket.on("send_message", (data) => {
+    console.log("Received message:", data);
+    socket.broadcast.emit("receive_message", data); // send to others
   });
 
-  // When a message is sent
-  socket.on('send_message', (data) => {
-    const messageWithTimestamp = {
-      ...data,
-      timestamp: Date.now()
-    };
-
-    // Save message to the room's array
-    if (!roomMessages[data.room]) {
-      roomMessages[data.room] = [];
-    }
-
-    roomMessages[data.room].push(messageWithTimestamp);
-
-    // Emit to everyone *except* sender
-    socket.to(data.room).emit('receive_message', messageWithTimestamp);
-  });
-
-  // Handle disconnection
-  socket.on('disconnect', () => {
-    console.log(`User Disconnected: ${socket.id}`);
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
   });
 });
 
-// Use the PORT environment variable provided by Render
-const PORT = process.env.PORT || 3001;
+app.get("/", (req, res) => {
+  res.send("Chatbot backend running.");
+});
+
+// ✅ Choose port
+const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
