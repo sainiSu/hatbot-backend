@@ -15,6 +15,12 @@ const io = new Server(server, {
   }
 });
 
+// ✅ Root route to test backend
+app.get('/', (req, res) => {
+  res.send('Chatbot backend is running ✅');
+});
+
+
 // In-memory storage for messages (per room)
 const roomMessages = {}; // { roomId: [ { messageData } ] }
 
@@ -61,8 +67,6 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+server.listen(3001, () => {
+  console.log('Server is running on port 3001');
 });
-
