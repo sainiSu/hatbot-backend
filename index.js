@@ -6,15 +6,17 @@ const { Server } = require("socket.io");
 const app = express();
 const server = http.createServer(app);
 
-// ✅ Allow both localhost and deployed frontend on Vercel
+// Allowed origins: localhost for dev + your Vercel frontend URL
 const allowedOrigins = [
   "http://localhost:3000",
   "https://chatbot-frontend-xyz1.vercel.app"
 ];
 
+// CORS middleware with origin logging for debugging
 app.use(
   cors({
     origin: function (origin, callback) {
+      console.log("CORS Origin:", origin); // Log origin to see incoming requests
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -25,6 +27,7 @@ app.use(
   })
 );
 
+// Setup Socket.IO server with matching CORS config
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
@@ -33,13 +36,14 @@ const io = new Server(server, {
   },
 });
 
-// 🔁 Socket.io logic
+// Socket.IO event handlers
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
   socket.on("send_message", (data) => {
     console.log("Received message:", data);
-    socket.broadcast.emit("receive_message", data); // send to others
+    // Broadcast the message to all other connected clients except sender
+    socket.broadcast.emit("receive_message", data);
   });
 
   socket.on("disconnect", () => {
@@ -47,11 +51,12 @@ io.on("connection", (socket) => {
   });
 });
 
+// Simple test endpoint
 app.get("/", (req, res) => {
   res.send("Chatbot backend running.");
 });
 
-// ✅ Choose port
+// Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
