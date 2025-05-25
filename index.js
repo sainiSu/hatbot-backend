@@ -8,9 +8,10 @@ app.use(cors());
 
 const server = http.createServer(app);
 
+// Update the origin to include your Vercel frontend URL
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:3000', // frontend origin
+    origin: ['http://localhost:3000', 'https://your-vercel-frontend.vercel.app'],
     methods: ['GET', 'POST']
   }
 });
@@ -19,7 +20,6 @@ const io = new Server(server, {
 app.get('/', (req, res) => {
   res.send('Chatbot backend is running ✅');
 });
-
 
 // In-memory storage for messages (per room)
 const roomMessages = {}; // { roomId: [ { messageData } ] }
@@ -67,6 +67,8 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(3001, () => {
-  console.log('Server is running on port 3001');
+// Use the PORT environment variable provided by Render
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
