@@ -56,8 +56,19 @@ app.get("/", (req, res) => {
   res.send("Chatbot backend running.");
 });
 
+// Healthcheck endpoint for Render or uptime checks
+app.get("/healthcheck", (req, res) => {
+  res.json({ status: "ok" });
+});
+
+// Catch-all 404 handler for undefined routes
+app.use((req, res) => {
+  res.status(404).send("Route not found");
+});
+
 // Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Allowed Origins: ${allowedOrigins.join(", ")}`);
 });
